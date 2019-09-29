@@ -1,9 +1,9 @@
 # TensorFlow_PanTilt_Cam
 Raspberry Pi 3/4 face / objects tracking with Python, OpenCV and Tensorflow, Tensorflow Lite and Coral Edge TPU
 
-Tensorflow, Tensorflow Lite and Tensorflow Lite with Coral Edge TPU
-compatible code. You can choose which framework to use depending
-either on your hardware (if you have the Coral Edge TPU) or on the
+FastForward installation guide.
+
+You can choose which framework to use depending either on your hardware (if you have the Coral Edge TPU) or on the
 model that you want to use. You can easily use your own trained models.
 
 Features:
@@ -11,7 +11,7 @@ Features:
 - Select one class from the models to track
 - Support all kinds of servos and webcams (not tested on Raspi Cam)
 
-The google model zoo provides a lot of pretrained models that are sufficient
+The google's [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) provides a lot of pretrained models that are sufficient
 for many usecases. For example, if you want to track dogs, cats, teddy bears
 or humans, the models from the object detection api will work well for you.
 
@@ -163,4 +163,153 @@ If everything worked out well you have successfully installed TensorFLow on your
 > tf.Tensor(-455.19247, shape=(), dtype=float32)
 
 ## OpenCV
-...
+
+We will compile opencv 3.4.4 from source mainly following the articles of [Vishwesh Shrimali](https://www.learnopencv.com/install-opencv-3-4-4-on-raspberry-pi/) and [Adrian Rosebrock](https://www.pyimagesearch.com/2018/09/26/install-opencv-4-on-your-raspberry-pi/).
+
+First we remove unnecessary packages for more free space.
+```
+sudo apt-get purge wolfram-engine
+sudo apt-get purge libreoffice*
+sudo apt-get clean
+sudo apt-get autoremove
+```
+
+Then we install some dependencies:
+```
+sudo apt-get update && sudo apt-get upgrade
+
+sudo apt-get -y install libwebp6 libwebp-dev
+sudo apt-get -y install libtiff5 libtiff5-dev
+sudo apt-get -y install libjasper1 libjasper-dev
+sudo apt-get -y install libilmbase-dev
+sudo apt-get -y install libopenexr23 libopenexr-dev
+sudo apt-get -y install libgstreamer1.0-0 libgstreamer1.0-dev
+sudo apt-get -y install libavcodec-dev
+sudo apt-get -y install libavformat-dev 
+sudo apt-get -y install libswscale-dev
+sudo apt-get -y install libqtgui4
+sudo apt-get -y install libqt4-test
+sudo apt-get -y install libxine2-dev libv4l-dev
+
+cd /usr/include/linux
+sudo ln -s -f ../libv4l1-videodev.h videodev.h
+
+sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
+sudo apt-get -y install libmp3lame-dev libtheora-dev
+sudo apt-get -y install libvorbis-dev libxvidcore-dev libx264-dev
+sudo apt-get -y install libopencore-amrnb-dev libopencore-amrwb-dev
+sudo apt-get -y install libavresample-dev
+sudo apt-get -y install x264 v4l-utils
+
+sudo apt-get -y install libgtk2.0-dev libtbb-dev qt5-default
+
+sudo apt-get -y install libprotobuf-dev protobuf-compiler
+sudo apt-get -y install libgoogle-glog-dev libgflags-dev
+sudo apt-get -y install libgphoto2-dev libeigen3-dev libhdf5-dev doxygen
+
+sudo apt-get -y install build-essential cmakeunzip pkg-config
+
+sudo apt-get -y install libjpeg-dev libpng-dev libtiff-dev
+sudo apt-get -y install libavcodec-dev libswscale-dev libv4l-dev
+sudo apt-get -y install libxvidcore-dev libx264-dev
+sudo apt-get -y install libgtk-3-dev
+sudo apt-get -y install libcanberra-gtk*
+sudo apt-get -y install libatlas-base-dev gfortran
+sudo apt-get -y install python3-dev
+```
+
+Download source and compile:
+
+We will make an installation folder and clone the git repositories:
+```
+mkdir ~/Installation && cd ~/Installation
+
+git clone https://github.com/opencv/opencv.git
+cd opencv
+git checkout 3.4
+cd ..
+ 
+git clone https://github.com/opencv/opencv_contrib.git
+cd opencv_contrib
+git checkout 3.4
+cd ..
+```
+
+The compilation will almost always fail because of a to small swapfile. We will temporarily change the SwapSize from normally 100 MB to 2048 MB until the end of the installation. 
+
+sudo gedit /etc/dphys-swapfile
+
+Change CONF_SWAPSIZE=100 to CONF_SWAPSIZE=2048. 
+
+> CONF_SWAPSIZE=100 >> CONF_SWAPSIZE=1024
+
+Now we need to deactivate the old swap and activate new swap space:
+```
+sudo /etc/init.d/dphys-swapfile stop
+sudo /etc/init.d/dphys-swapfile start
+```
+
+![#f03c15](https://placehold.it/15/f03c15/000000?text=+) `Note: Don´t forget to change swap space back to 100 MB after the installation.`
+
+
+Install numpy and dlib:
+```
+pip3 install numpy
+sudo apt-get install -y libboost-all-dev
+pip3 install dlib
+```
+
+Navigate to the build directory:
+```
+cd ~/Installation/opencv
+mkdir build
+cd build
+```
+
+We will make a system wide installation of opencv:
+
+You need to adjust the **path`s**, but if you followed my complete guide everything should be fine.
+```
+cmake-D CMAKE_BUILD_TYPE=RELEASE \
+        -D CMAKE_INSTALL_PREFIX=/usr/local \
+        -D INSTALL_C_EXAMPLES=OFF \
+        -D OPENCV_ENABLE_NONFREE=ON \
+        -D INSTALL_PYTHON_EXAMPLES=OFF \
+        -D WITH_TBB=ON \
+        -D WITH_V4L=ON \
+        -D ENABLE_VFPV3=ON \
+        -D ENABLE_NEON=ON \
+        -D OPENCV_PYTHON3_INSTALL_PATH=/usr/local/lib/python3.7/site-packages \
+        -D WITH_QT=ON \
+        -D WITH_OPENGL=ON \
+        -D OPENCV_EXTRA_MODULES_PATH=/home/pi/Installation/opencv_contrib/modules \
+        -D BUILD_TESTS=OFF \
+        -D ENABLE_PRECOMPILED_HEADERS=OFF \
+        -D BUILD_EXAMPLES=OFF ..
+```
+
+We only use 2 cores for compilation! This takes longer but using all cores sometimes result in failure.
+```
+make -j2
+make install
+```
+
+When everything worked out try to import cv2:
+```
+python3 --> import cv2 --> print("cv2 version:",cv2.__version__)
+```
+
+If you see the output 
+
+> cv2 version: 3.4.2
+
+you successfully installed opencv 3.4.2 from source!
+
+If the package is not found, we need to set/add the pythonpath of the installation to ~/.bashrc:
+```
+sudo gedit ~/.bashrc
+export PYTHONPATH=/usr/local/lib/python3.7/site-packages/cv2/python-3.7/cv2/python-3.7
+```
+
+
+
